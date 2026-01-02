@@ -1,0 +1,33 @@
+services:
+  transactionapi:
+    image: transactionapi:latest
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: transaction-api
+    ports:
+      - "7000:8080"   # HTTP
+      - "7001:8081"   # HTTPS (if configured)
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - Logging__EncryptionKey=${ENCRYPTION_KEY:-TransactionAPI@2026!SecureKey#ForPasswordEncryption}
+    volumes:
+      # Mount logs directory to persist logs on host
+      - ./logs:/app/logs
+      # Mount appsettings for configuration (optional)
+      - ./appsettings.json:/app/appsettings.json:ro
+      - ./log4net.config:/app/log4net.config:ro
+    restart: unless-stopped
+    networks:
+      - transaction-network
+
+networks:
+  transaction-network:
+    driver: bridge
+
+# Optional: Add volumes for persistent data
+volumes:
+  transaction-logs:
+    driver: local
+

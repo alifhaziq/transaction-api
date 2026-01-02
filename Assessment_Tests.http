@@ -1,0 +1,528 @@
+### ============================================================
+### TRANSACTION API - COMPLETE TEST SUITE
+### All 5 Interview Questions (Q1-Q5) Test Cases
+### ============================================================
+
+### CONFIGURATION
+@baseUrl = http://localhost:7000
+@apiEndpoint = {{baseUrl}}/api/submittrxmessage
+
+### TIMESTAMPS (Valid for ~5 minutes)
+### Generated: 2026-01-02T15:00:09Z
+### Valid until: ~2026-01-02T15:05:09Z
+### NOTE: All amounts in CENTS (MYR 1 = 100 cents)
+
+### ALLOWED PARTNERS
+### FG-00001 | FAKEGOOGLE | RkFLRVBBU1NXT1JEMTIzNA==
+### FG-00002 | FAKEPEOPLE | RkFLRVBBU1NXT1JENDU3OA==
+
+################################################################################
+### QUESTION 1: REST API FOUNDATION
+### Requirements: Partner auth, signature verification, success/failed result
+################################################################################
+
+### ----------------------------------------------------------------------------
+### TEST Q1-1: Valid Transaction - FAKEGOOGLE Partner (Success)
+### Tests: Authentication, Signature Verification, API Response
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEGOOGLE",
+  "partnerrefno": "FG-00001",
+  "partnerpassword": "RkFLRVBBU1NXT1JEMTIzNA==",
+  "totalamount": 10000000,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "NTQyOGQ3ZmNiMjE0MWYyODM4ZDczZTBkNzQwNjM2NGFjNjk2MjRhMDMxYTc1NmQxNDc1ZmEzNzg2ZGI2MWMzZQ=="
+}
+
+### EXPECTED RESPONSE:
+### {
+###   "result": 1,
+###   "totalamount": 10000000,
+###   "totaldiscount": 1500000,
+###   "finalamount": 8500000,
+###   "resultmessage": null
+### }
+### EXPLANATION: MYR 100,000 → 15% base discount → MYR 85,000 final
+
+###
+
+### ----------------------------------------------------------------------------
+### TEST Q1-2: Valid Transaction - FAKEPEOPLE Partner (Success)
+### Tests: Second partner authentication
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEPEOPLE",
+  "partnerrefno": "FG-00002",
+  "partnerpassword": "RkFLRVBBU1NXT1JENDU3OA==",
+  "totalamount": 300000,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "MTE0M2FiM2E2NTk1OGY3MTRlZmJiYTM0MmY3OTMyZGI2MWRmOGFlM2NmMmIzYWYxNGY1OTIxNDQ0MGEzMzlhNA=="
+}
+
+### EXPECTED RESPONSE:
+### {
+###   "result": 1,
+###   "totalamount": 300000,
+###   "totaldiscount": 15000,
+###   "finalamount": 285000,
+###   "resultmessage": null
+### }
+### EXPLANATION: MYR 3,000 → 5% base discount → MYR 2,850 final
+
+###
+
+### ----------------------------------------------------------------------------
+### TEST Q1-3: Invalid Partner Key (Failed)
+### Tests: Authentication failure
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "INVALIDPARTNER",
+  "partnerrefno": "FG-99999",
+  "partnerpassword": "V3JvbmdQYXNzd29yZA==",
+  "totalamount": 10000,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "invalidSignature"
+}
+
+### EXPECTED RESPONSE:
+### {
+###   "result": 0,
+###   "totalamount": null,
+###   "totaldiscount": null,
+###   "finalamount": null,
+###   "resultmessage": "Access Denied!"
+### }
+
+###
+
+### ----------------------------------------------------------------------------
+### TEST Q1-4: Invalid Signature (Failed)
+### Tests: Signature validation failure
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEGOOGLE",
+  "partnerrefno": "FG-00001",
+  "partnerpassword": "RkFLRVBBU1NXT1JEMTIzNA==",
+  "totalamount": 10000,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "WRONG_SIGNATURE"
+}
+
+### EXPECTED RESPONSE:
+### {
+###   "result": 0,
+###   "totalamount": null,
+###   "totaldiscount": null,
+###   "finalamount": null,
+###   "resultmessage": "Access Denied!"
+### }
+
+###
+
+################################################################################
+### QUESTION 2: VALIDATION WITH ERROR CODES
+### Requirements: Error Code 1-4, Field validation, Custom error messages
+################################################################################
+
+### ----------------------------------------------------------------------------
+### TEST Q2-1: Access Denied (Error Code 1)
+### Tests: Invalid partner authentication
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "INVALID",
+  "partnerrefno": "XXX",
+  "partnerpassword": "xxx",
+  "totalamount": 1000,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "xxx"
+}
+
+### EXPECTED RESPONSE:
+### {
+###   "result": 0,
+###   "resultmessage": "Access Denied!"
+### }
+### ERROR CODE 1: Access Denied!
+
+###
+
+### ----------------------------------------------------------------------------
+### TEST Q2-2: Invalid Total Amount (Error Code 2)
+### Tests: Total amount doesn't match sum of items
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEGOOGLE",
+  "partnerrefno": "FG-00001",
+  "partnerpassword": "RkFLRVBBU1NXT1JEMTIzNA==",
+  "totalamount": 999,
+  "items": [
+    {
+      "partneritemref": "i-001",
+      "name": "Test Item",
+      "qty": 1,
+      "unitprice": 1000
+    }
+  ],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "test"
+}
+
+### EXPECTED RESPONSE:
+### {
+###   "result": 0,
+###   "resultmessage": "Invalid Total Amount."
+### }
+### ERROR CODE 2: Invalid Total Amount.
+
+###
+
+### ----------------------------------------------------------------------------
+### TEST Q2-3: Expired Timestamp (Error Code 3)
+### Tests: Timestamp outside ±5 minute window
+### NOTE: Use an old timestamp to trigger this
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEGOOGLE",
+  "partnerrefno": "FG-00001",
+  "partnerpassword": "RkFLRVBBU1NXT1JEMTIzNA==",
+  "totalamount": 10000,
+  "items": [],
+  "timestamp": "2026-01-02T13:00:00Z",
+  "sig": "expired"
+}
+
+### EXPECTED RESPONSE:
+### {
+###   "result": 0,
+###   "resultmessage": "Expired."
+### }
+### ERROR CODE 3: Expired.
+
+###
+
+### ----------------------------------------------------------------------------
+### TEST Q2-4: Missing Signature (Error Code 4)
+### Tests: Required field validation
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEGOOGLE",
+  "partnerrefno": "FG-00001",
+  "partnerpassword": "RkFLRVBBU1NXT1JEMTIzNA==",
+  "totalamount": 10000,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": ""
+}
+
+### EXPECTED RESPONSE:
+### {
+###   "result": 0,
+###   "resultmessage": "sig is Required."
+### }
+### ERROR CODE 4: ##ParamName## is Required.
+
+###
+
+################################################################################
+### QUESTION 3: DISCOUNT CALCULATION
+### Requirements: Base discounts, Prime bonus, Ends-in-5 bonus, 20% cap
+################################################################################
+
+### DISCOUNT TIERS:
+### MYR 0-500: 0%
+### MYR 501-1,000: 3%
+### MYR 1,001-5,000: 5%
+### MYR 5,001-10,000: 7%
+### MYR 10,001-50,000: 10%
+### MYR 50,001+: 15%
+###
+### CONDITIONAL DISCOUNTS:
+### Prime number > MYR 500: +8%
+### Ends in 5 > MYR 900: +10%
+### MAXIMUM CAP: 20%
+
+### ----------------------------------------------------------------------------
+### TEST Q3-1: Base Discount 15% (MYR 100,000)
+### Tests: Highest tier base discount
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEGOOGLE",
+  "partnerrefno": "FG-00001",
+  "partnerpassword": "RkFLRVBBU1NXT1JEMTIzNA==",
+  "totalamount": 10000000,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "NTQyOGQ3ZmNiMjE0MWYyODM4ZDczZTBkNzQwNjM2NGFjNjk2MjRhMDMxYTc1NmQxNDc1ZmEzNzg2ZGI2MWMzZQ=="
+}
+
+### EXPECTED: MYR 100,000 (>50,001) → 15% = MYR 15,000 discount → Final: MYR 85,000
+### Response: {"result":1,"totaldiscount":1500000,"finalamount":8500000}
+
+###
+
+### ----------------------------------------------------------------------------
+### TEST Q3-2: Base Discount 5% (MYR 3,000)
+### Tests: Mid-tier base discount
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEPEOPLE",
+  "partnerrefno": "FG-00002",
+  "partnerpassword": "RkFLRVBBU1NXT1JENDU3OA==",
+  "totalamount": 300000,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "MTE0M2FiM2E2NTk1OGY3MTRlZmJiYTM0MmY3OTMyZGI2MWRmOGFlM2NmMmIzYWYxNGY1OTIxNDQ0MGEzMzlhNA=="
+}
+
+### EXPECTED: MYR 3,000 (1,001-5,000) → 5% = MYR 150 discount → Final: MYR 2,850
+### Response: {"result":1,"totaldiscount":15000,"finalamount":285000}
+
+###
+
+### ----------------------------------------------------------------------------
+### TEST Q3-3: Base Discount 3% (MYR 800)
+### Tests: Low-tier base discount
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEGOOGLE",
+  "partnerrefno": "FG-00001",
+  "partnerpassword": "RkFLRVBBU1NXT1JEMTIzNA==",
+  "totalamount": 80000,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "ZjJjOTFjYzA2ZDJmOTBkZThmYzEyZDk2MmEwYTViY2VmOTczY2YxY2Q2NWY2NjIzYWZmNTM1YzAyYzU3ZjE2ZQ=="
+}
+
+### EXPECTED: MYR 800 (501-1,000) → 3% = MYR 24 discount → Final: MYR 776
+### Response: {"result":1,"totaldiscount":2400,"finalamount":77600}
+
+###
+
+### ----------------------------------------------------------------------------
+### TEST Q3-4: Prime Number Discount (MYR 523)
+### Tests: Base 0% + Prime +8% = 8% total
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEGOOGLE",
+  "partnerrefno": "FG-00001",
+  "partnerpassword": "RkFLRVBBU1NXT1JEMTIzNA==",
+  "totalamount": 52300,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "NWY0ZDk2ODY2MDA3MDI2NzBmNDdlODFmNmUzYzE3MjRlMTlmZmZjZGJkNjY5Mjg4YjZjNzI0MTdlMzVkNzQ1NA=="
+}
+
+### EXPECTED: MYR 523 (prime > 500) → 0% base + 8% prime = 8% = MYR 41.84
+### Response: {"result":1,"totaldiscount":4184,"finalamount":48116}
+### 523 is PRIME, 523 > 500 → +8% conditional discount
+
+###
+
+### ----------------------------------------------------------------------------
+### TEST Q3-5: Ends in 5 Discount (MYR 1,005)
+### Tests: Base 5% + Ends-in-5 +10% = 15% total
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEGOOGLE",
+  "partnerrefno": "FG-00001",
+  "partnerpassword": "RkFLRVBBU1NXT1JEMTIzNA==",
+  "totalamount": 100500,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "MWRjMTYzNzAyZDdjY2MzYzMwODIxMTAzMDJjODIzNWVhNTA5MTc2NGZlNWRjYjgzMmM0MThjNDYzYWIwMzgyNg=="
+}
+
+### EXPECTED: MYR 1,005 (1,001-5,000, ends in 5, >900) → 5% + 10% = 15% = MYR 150.75
+### Response: {"result":1,"totaldiscount":15075,"finalamount":85425}
+### 1005 ends in 5, 1005 > 900 → +10% conditional discount
+
+###
+
+### ----------------------------------------------------------------------------
+### TEST Q3-6: Maximum Discount Cap 20% (MYR 50,005)
+### Tests: Base 15% + Ends-in-5 +10% = 25% capped to 20%
+### ----------------------------------------------------------------------------
+POST {{apiEndpoint}}
+Content-Type: application/json
+
+{
+  "partnerkey": "FAKEGOOGLE",
+  "partnerrefno": "FG-00001",
+  "partnerpassword": "RkFLRVBBU1NXT1JEMTIzNA==",
+  "totalamount": 5000500,
+  "items": [],
+  "timestamp": "2026-01-02T15:00:09Z",
+  "sig": "OTRjNzkyZGZjNTA2NDQ1ZjE2MzQ5NWI4NDZjYzUyNzkyZTEyYzgyNjMxOWJiMGZmYTEyOGM4NjhlODhjMWE5Yg=="
+}
+
+### EXPECTED: MYR 50,005 (>50,001, ends in 5) → 15% + 10% = 25% BUT CAPPED at 20%
+### Response: {"result":1,"totaldiscount":1000100,"finalamount":4000400}
+### Calculated: 25%, Applied: 20% (maximum cap)
+
+###
+
+################################################################################
+### QUESTION 4: ENCRYPTED LOGGING TO TEXT FILES
+### Requirements: log4net, TEXT FILES, Encrypted passwords
+### HOW TO VERIFY: Check log files after running tests
+################################################################################
+
+### After running any of the above tests, verify Question 4:
+
+### VIEW LOG FILES:
+### Get-ChildItem logs
+
+### VIEW ENCRYPTED PASSWORDS:
+### Get-Content logs\request-response.log* | Select-String "ENCRYPTED"
+
+### VIEW REQUEST/RESPONSE LOGS:
+### Get-Content logs\request-response.log* | Select-Object -First 50
+
+### VIEW APPLICATION LOGS:
+### Get-Content logs\application.log | Select-Object -Last 30
+
+### EXPECTED IN LOGS:
+### ✓ Request bodies saved to TEXT FILE (request-response.log)
+### ✓ Response bodies saved to TEXT FILE (request-response.log)
+### ✓ Passwords encrypted: "[ENCRYPTED:base64string]"
+### ✓ Signatures masked: "[MASKED]"
+### ✓ All logs in TEXT FILES using log4net
+
+################################################################################
+### QUESTION 5: DOCKER CONTAINERIZATION
+### Requirements: Dockerfile, Docker Compose, Multi-stage build, Security
+### HOW TO VERIFY: Check Docker status
+################################################################################
+
+### CHECK DOCKER CONTAINER:
+### docker ps
+### Expected: Container "transaction-api" running on port 7000
+
+### CHECK CONTAINER LOGS:
+### docker logs transaction-api --tail 50
+
+### REBUILD CONTAINER:
+### docker compose up --build -d
+
+### STOP CONTAINER:
+### docker compose down
+
+### ACCESS CONTAINER SHELL:
+### docker exec -it transaction-api /bin/bash
+
+### EXPECTED:
+### ✓ Container running (transaction-api)
+### ✓ API accessible at http://localhost:7000
+### ✓ Multi-stage Dockerfile
+### ✓ Non-root user (appuser)
+### ✓ Logs mounted to host
+
+################################################################################
+### SUMMARY OF ALL 5 QUESTIONS
+################################################################################
+
+### QUESTION 1: REST API Foundation
+### Tests: Q1-1, Q1-2, Q1-3, Q1-4
+### Covers: Authentication, Signature verification, Success/Failure responses
+
+### QUESTION 2: Validation with Error Codes
+### Tests: Q2-1, Q2-2, Q2-3, Q2-4
+### Covers: Error Code 1 (Access Denied), 2 (Invalid Amount), 3 (Expired), 4 (Required)
+
+### QUESTION 3: Discount Calculation
+### Tests: Q3-1, Q3-2, Q3-3, Q3-4, Q3-5, Q3-6
+### Covers: All 6 discount tiers, Prime bonus, Ends-in-5 bonus, 20% cap
+
+### QUESTION 4: Encrypted Logging
+### Verify: Check log files after running tests
+### Files: logs/application.log, logs/request-response.log*
+### Covers: log4net, TEXT FILES, Encrypted passwords, Request/Response logging
+
+### QUESTION 5: Docker
+### Verify: docker ps, docker logs, container status
+### Covers: Containerization, Multi-stage build, Security (non-root user)
+
+################################################################################
+### TOTAL TESTS: 14 API Tests + 2 Verification Checks = 16 Complete Tests
+################################################################################
+
+### API Tests: 14
+### - Question 1: 4 tests
+### - Question 2: 4 tests
+### - Question 3: 6 tests
+
+### Verification Checks: 2
+### - Question 4: Check log files (TEXT FILES with encrypted passwords)
+### - Question 5: Check Docker container status
+
+### ALL 5 INTERVIEW QUESTIONS COVERED ✅
+
+################################################################################
+### NOTES
+################################################################################
+
+### Timestamps expire after ~5 minutes
+### If you get "Expired" error, timestamps need regeneration
+
+### Valid Partners:
+### - FG-00001 / FAKEGOOGLE / RkFLRVBBU1NXT1JEMTIzNA==
+### - FG-00002 / FAKEPEOPLE / RkFLRVBBU1NXT1JENDU3OA==
+
+### Amounts in CENTS:
+### - MYR 1 = 100 cents
+### - MYR 100,000 = 10,000,000 cents
+
+### Signature Algorithm:
+### 1. Timestamp format: yyyyMMddHHmmss
+### 2. Concatenate: timestamp+partnerkey+partnerrefno+totalamount+password
+### 3. SHA-256 hash (hex lowercase)
+### 4. Base64 encode
+
+### Docker Port Mapping:
+### Host: 7000 → Container: 8080
+
+################################################################################

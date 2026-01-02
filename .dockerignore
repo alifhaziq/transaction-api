@@ -1,0 +1,49 @@
+# Directories
+**/bin/
+**/obj/
+**/out/
+**/logs/
+**/publish/
+
+# Files
+**/.dockerignore
+**/.env
+**/.git
+**/.gitignore
+**/.vs
+**/.vscode
+**/*.user
+**/*.suo
+**/.DS_Store
+**/Thumbs.db
+
+# Documentation (not needed in container)
+**/*.md
+!README.md
+
+# Test files
+**/*.http
+**/test-*.http
+
+# Build artifacts
+**/node_modules
+**/*.cache
+**/*.log
+**/*.tmp
+**/*.temp
+
+# IDE
+.idea/
+.editorconfig
+*.swp
+*.bak
+*.tmp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+**/Dockerfile*
+**/docker-compose*
+
